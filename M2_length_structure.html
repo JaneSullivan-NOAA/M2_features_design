@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>M2 FIMS features design doc</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="M2_length_structure_files/libs/clipboard/clipboard.min.js"></script>
+<script src="M2_length_structure_files/libs/quarto-html/quarto.js"></script>
+<script src="M2_length_structure_files/libs/quarto-html/popper.min.js"></script>
+<script src="M2_length_structure_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="M2_length_structure_files/libs/quarto-html/anchor.min.js"></script>
+<link href="M2_length_structure_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="M2_length_structure_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="M2_length_structure_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="M2_length_structure_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="M2_length_structure_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">M2 FIMS features design doc</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="alternative-methods-for-including-length-data-in-age-structured-assessment-models" class="level2">
+<h2 class="anchored" data-anchor-id="alternative-methods-for-including-length-data-in-age-structured-assessment-models">Alternative methods for including length data in age-structured assessment models</h2>
+<section id="stock-synthesis-3" class="level3">
+<h3 class="anchored" data-anchor-id="stock-synthesis-3">Stock Synthesis 3</h3>
+<p>This method is used in Stock Synthesis 3 (SS3; Methot and Wetzel, 2013) and was recently implemented in the <a href="https://github.com/GiancarloMCorrea/wham/tree/growth">“growth”</a> branch of the Wood’s Hole Assessment Model (WHAM; Stock and Miller, 2021; Correa et al., 2023).</p>
+<p>Predicted catch-at-age and -length for year <span class="math inline">\(y\)</span> and fishery <span class="math inline">\(f\)</span> are calculated using element-wise multiplication</p>
+<p><span class="math display">\[
+\hat{C}_{y,f,l,a}=\phi_{y,f,l,a}S_{y,f,l}S_{y,f,a}F_{y,f}N_{y,a}\frac{(1-\text{exp}(-Z_{y,a}))}{Z_{y,a}}
+\]</span></p>
+<p>where <span class="math inline">\(N_{y,a}\)</span> is the abundance-at-age <span class="math inline">\(a\)</span> during year <span class="math inline">\(y\)</span>, <span class="math inline">\(Z_{y,a}\)</span> is the total age-specific mortality, <span class="math inline">\(F_{y,f}\)</span> is the fleet-specific annual fishing mortality, <span class="math inline">\(\phi_{y,f,l,a}\)</span> is the fleet-specific age-length transition matrix (i.e., the proportion of fish of age <span class="math inline">\(a\)</span> in length bin <span class="math inline">\(l\)</span>), and <span class="math inline">\(S_{y,f,l}\)</span> and <span class="math inline">\(S_{y,f,a}\)</span> are the selectivity-at-length and selectivity-at-age, respectively. When <span class="math inline">\(S_{y,f,a}\)</span> is used, <span class="math inline">\(S_{y,f,l}\)</span> is set to a matrix of 1s of the appropriate dimensions. Similarly when <span class="math inline">\(S_{y,f,l}\)</span> is used, <span class="math inline">\(S_{y,f,a}\)</span> is set to a matrix of 1s.</p>
+<p>Note that <span class="math inline">\(Z_{y,a}\)</span> is age-based and relies on the calculation of total age-based fishing mortality <span class="math inline">\(F_{y,a}\)</span>, which in turn relies on age-based fishery selectivity. Therefore, when selectivity-at-length is used, it must first be converted to selectivity-at-age using the dot product of selectivity-at-length and the transpose of the age-length transition matrix:</p>
+<p><span class="math display">\[
+S_{y,f,a}=S_{y,f,l}\cdot\phi_{y,f,l,a}^\top
+\]</span></p>
+<p>This implied fleet-specific selectivity-at-age is used to obtain <span class="math inline">\(F_{y,f,a}\)</span>, which can be summed across fleets, and combined with natural mortality to obtain <span class="math inline">\(Z_{y,a}\)</span> for use in the predicted catch-at-age and -length equation above.</p>
+<p>The predicted abundance index-at-age and -length for year <span class="math inline">\(y\)</span> and index <span class="math inline">\(i\)</span> is obtained using</p>
+<p><span class="math display">\[
+\hat{I}_{y,i,l,a}=\phi_{y,i,l,a}S_{y,i,l}S_{y,i,a}N_{y,a}\text{exp}(-f_{y,a}Z_{y,a})
+\]</span></p>
+<p>where <span class="math inline">\(f_{y,a}\)</span> is the fraction of the year when the survey was conducted.</p>
+<p>The predicted catch-at-age <span class="math inline">\(\hat{C}_{y,f,a}\)</span> and catch-at-length <span class="math inline">\(\hat{C}_{y,f,l}\)</span> is calculated as</p>
+<p><span class="math display">\[\hat{C}_{y,f,a}=\sum_{l}\hat{C}_{y,f,l,a}\]</span></p>
+<p>and <span class="math display">\[ \hat{C}_{y,f,l}=\sum_{a}\hat{C}_{y,f,l,a} \]</span>These are converted to predicted proportions-at-age and proportions-at-length (i.e., marginal age and length compositions, respectively):</p>
+<p><span class="math display">\[
+\hat{p}_{y,f,a}=\frac{\hat{C}_{y,f,a}}{\sum\limits_{a}{\hat{C}_{y,f,a}}}
+\]</span></p>
+<p>and</p>
+<p><span class="math display">\[
+\hat{p}_{y,f,l}=\frac{\hat{C}_{y,f,l}}{\sum\limits_{l}{\hat{C}_{y,f,l}}}
+\]</span></p>
+<p>Predicted survey age and length marginal compositions are obtained in an identical fashion.</p>
+<p><mark><strong>IMPLEMENTATION NOTES:</strong> This method has a proven track record estimating growth (<strong>cite</strong>), fitting to numerous types of size-based data (e.g., marginal length compositions, conditional age-at-length), and estimating both length-based and age-based selectivity functions. <strong>TODO_NATHAN: benefit can specify both age and length base slx functions, example, exploratory red snapper model</strong>. The known drawbacks occur when length-based selectivity is used or when growth is estimated; the standard normal cumulative density function used to generate the age-length transition matrix will result in a dense matrix, that when multiplied by other quantities will result in inefficient calculations. Giancarlo tried to use <code>Eigen::SparseMatrix</code> to alleviate this issue in <a href="https://github.com/GiancarloMCorrea/wham/blob/3af37de1566f3a99b967901e540d81ef70f613a0/src/helper_functions.hpp#L1456">WHAM</a>, but it did not help. For Milestone 2, <span class="math inline">\(\phi_{y,f,l,a}\)</span> and <span class="math inline">\(\phi_{y,i,l,a}\)</span> can be estimated externally and input as fixed matrices for each survey and fishery. In future milestones, this framework will allow us flexibility to estimate growth and length-based selectivity without needing to update this aspect of the observation model. It will also allow us to include a range of parametric, semi-parametric, and non-parametric growth functions using random effects (Correa et al., 2023). In order to speed up optimization once growth is estimated, methods should be developed to make the <span class="math inline">\(\phi\)</span> matrices sparse. </mark></p>
+</section>
+</section>
+<section id="ak-method" class="level2">
+<h2 class="anchored" data-anchor-id="ak-method">AK method</h2>
+<p>Marginal age and length compositions are often fit in bespoke ADMB models in Alaska. This approach relies on age-based selectivity functions, and growth is not estimated internally.</p>
+<p>Predicted catch-at-age for year <span class="math inline">\(y\)</span> and fishery <span class="math inline">\(f\)</span> is calculated using element-wise multiplication</p>
+<p><span class="math display">\[ \hat{C}_{y,f,a}=F_{y,f,a}N_{y,a}\frac{(1-\text{exp}(-Z_{y,a}))}{Z_{y,a}} \]</span></p>
+<p>where <span class="math inline">\(N_{y,a}\)</span> is the abundance-at-age <span class="math inline">\(a\)</span> during year <span class="math inline">\(y\)</span>, <span class="math inline">\(Z_{y,a}\)</span> is the total age-specific mortality for each year, and <span class="math inline">\(F_{y,f,a}\)</span> is the fleet-specific age-specific fishing mortality for each year.</p>
+<p>Similarly, the predicted abundance-at-age <span class="math inline">\(\hat{I}_{y,i,a}\)</span> for the survey index is calculated as:</p>
+<p><span class="math display">\[
+\hat{I}_{y,i,a}=S_{y,i,a}N_{y,a}\text{exp}(-f_{y,a}Z_{y,a})
+\]</span></p>
+<p>where <span class="math inline">\(f_{y,a}\)</span> is the fraction of the year when the survey was conducted.</p>
+<p>The predicted proportions-at-age (i.e., marginal age compositions) are obtained using:</p>
+<p><span class="math display">\[ \hat{p}_{y,f,a}=\frac{\hat{C}_{y,f,a}}{\sum\limits_{a}{\hat{C}_{y,f,a}}} \]</span></p>
+<p>These are converted to predicted proportions-at-length (i.e., marginal length compositions) using the dot product of <span class="math inline">\(\hat{p}_{y,f,a}\)</span> and the fleet-specific age-length transition matrix <span class="math inline">\(\phi_{y,f,l,a}\)</span>:</p>
+<p><span class="math display">\[ \hat{p}_{y,f,l}=\hat{p}_{y,f,a}\cdot\phi_{y,f,l,a} \]</span></p>
+<p>Predicted survey age and length marginal compositions are obtained in an identical fashion using the age-length transition matrix specified for that survey.</p>
+<p><mark><strong>IMPLEMENTATION NOTES:</strong> This method has the benefit of being very simple. The known drawbacks are that it does not currently include length-based selectivity, and at least in Alaska, growth (i.e., the age-length transition matrix) is not estimated internally. Extensions could be developed that include length-based selectivity; for example, that convert length-based selectivity to age-based selectivity using the transpose of the age-length transition matrix. When marginal length compositions are fit, this would require an extra dot product calculation in the conversion from <span class="math inline">\(\hat{p}_{y,f,a}\)</span> to <span class="math inline">\(\hat{p}_{y,f,l}\)</span>. Note that the SS3 approach is doing the same calculations but doing so using element-wise multiplication and summing over lengths or ages to get marginal age or length compositions, respectively. In SS3, these calculations happen regardless of whether age or length-based selectivity is used. It is unclear if the element-wise multiplication approach in SS3 or the dot product </mark></p>
+</section>
+<section id="sam-method" class="level2">
+<h2 class="anchored" data-anchor-id="sam-method">SAM method</h2>
+<p>SAM is a state-space assessment model used in several ICES stock assessments (is the best citation Nielsen and Berg, 2014?).</p>
+<p><span class="math display">\[
+\text{log}\hat{C}_{y,f,a}=\text{log}F_{y,f,a}-\text{log}Z_{y,f,a}+\text{log}N_{y,a}+\text{log}(1-\text{exp}(-Z_{y,a}))
+\]</span></p>
+<p>… then extend just like AK method.</p>
+<p><span class="math display">\[
+\hat{C}_{y,l}=\hat{C}_{y,a}\cdot\phi_{y,l,a}
+\]</span></p>
+<p>Similarly could convert to <span class="math inline">\(F_{y,f,l}\)</span> if needed:</p>
+<p><span class="math display">\[ F_{y,f,l}=F_{y,f,a}\cdot\phi_{y,f,l,a} \]</span></p>
+<p><mark><strong>IMPLEMENTATION NOTES:</strong> This method has the benefit of being a purely state-space model and collapses the constructs of fishing mortality and selectivity, thus reducing model complexity in theory. A drawback of this approach is that we lose parametric selectivity functions that are prevalent in the U.S. It is currently unknown how well growth (i.e., the <span class="math inline">\(\phi\)</span> matrix) can be estimated internall). We don’t know currently know the trade offs for efficiency.</mark></p>
+</section>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">References</h2>
+<p>Correa, G.M., Monnahan, C.C., Sullivan, J.Y., Thorson, J.T. and Punt, A.E., 2023. Modelling time-varying growth in state-space stock assessments.&nbsp;ICES Journal of Marine Science,&nbsp;80(7), 2036-2049.</p>
+<p>Methot , R. D., and Wetzel, C. R. 2013. Stock synthesis: a biological and statistical framework for fish stock assessment and fishery manage- ment. Fisheries Research, 142: 86–99.</p>
+<p>Stock , B. C., and Miller , T . J. 2021. The Woods Hole Assessment Model (WHAM): a general state-space assessment framework that incorpo- rates time- and age-varying processes via random effects and links to environmental covariates. Fisheries Research, 240: 105967.</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

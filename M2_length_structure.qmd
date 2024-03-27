@@ -1,0 +1,113 @@
+---
+title: "M2 FIMS features design doc"
+format: html
+editor: visual
+---
+
+## Alternative methods for including length data in age-structured assessment models
+
+### Stock Synthesis 3
+
+This method is used in Stock Synthesis 3 (SS3; Methot and Wetzel, 2013) and was recently implemented in the ["growth"](https://github.com/GiancarloMCorrea/wham/tree/growth) branch of the Wood's Hole Assessment Model (WHAM; Stock and Miller, 2021; Correa et al., 2023).
+
+Predicted catch-at-age and -length for year $y$ and fishery $f$ are calculated using element-wise multiplication
+
+$$
+\hat{C}_{y,f,l,a}=\phi_{y,f,l,a}S_{y,f,l}S_{y,f,a}F_{y,f}N_{y,a}\frac{(1-\text{exp}(-Z_{y,a}))}{Z_{y,a}}
+$$
+
+where $N_{y,a}$ is the abundance-at-age $a$ during year $y$, $Z_{y,a}$ is the total age-specific mortality, $F_{y,f}$ is the fleet-specific annual fishing mortality, $\phi_{y,f,l,a}$ is the fleet-specific age-length transition matrix (i.e., the proportion of fish of age $a$ in length bin $l$), and $S_{y,f,l}$ and $S_{y,f,a}$ are the selectivity-at-length and selectivity-at-age, respectively. When $S_{y,f,a}$ is used, $S_{y,f,l}$ is set to a matrix of 1s of the appropriate dimensions. Similarly when $S_{y,f,l}$ is used, $S_{y,f,a}$ is set to a matrix of 1s.
+
+Note that $Z_{y,a}$ is age-based and relies on the calculation of total age-based fishing mortality $F_{y,a}$, which in turn relies on age-based fishery selectivity. Therefore, when selectivity-at-length is used, it must first be converted to selectivity-at-age using the dot product of selectivity-at-length and the transpose of the age-length transition matrix:
+
+$$
+S_{y,f,a}=S_{y,f,l}\cdot\phi_{y,f,l,a}^\top
+$$
+
+This implied fleet-specific selectivity-at-age is used to obtain $F_{y,f,a}$, which can be summed across fleets, and combined with natural mortality to obtain $Z_{y,a}$ for use in the predicted catch-at-age and -length equation above.
+
+The predicted abundance index-at-age and -length for year $y$ and index $i$ is obtained using
+
+$$
+\hat{I}_{y,i,l,a}=\phi_{y,i,l,a}S_{y,i,l}S_{y,i,a}N_{y,a}\text{exp}(-f_{y,a}Z_{y,a})
+$$
+
+where $f_{y,a}$ is the fraction of the year when the survey was conducted.
+
+The predicted catch-at-age $\hat{C}_{y,f,a}$ and catch-at-length $\hat{C}_{y,f,l}$ is calculated as
+
+$$\hat{C}_{y,f,a}=\sum_{l}\hat{C}_{y,f,l,a}$$
+
+and $$ \hat{C}_{y,f,l}=\sum_{a}\hat{C}_{y,f,l,a} $$These are converted to predicted proportions-at-age and proportions-at-length (i.e., marginal age and length compositions, respectively):
+
+$$
+\hat{p}_{y,f,a}=\frac{\hat{C}_{y,f,a}}{\sum\limits_{a}{\hat{C}_{y,f,a}}}
+$$
+
+and
+
+$$
+\hat{p}_{y,f,l}=\frac{\hat{C}_{y,f,l}}{\sum\limits_{l}{\hat{C}_{y,f,l}}}
+$$
+
+Predicted survey age and length marginal compositions are obtained in an identical fashion.
+
+<mark>**IMPLEMENTATION NOTES:** This method has a proven track record estimating growth (**cite**), fitting to numerous types of size-based data (e.g., marginal length compositions, conditional age-at-length), and estimating both length-based and age-based selectivity functions. **TODO_NATHAN: benefit can specify both age and length base slx functions, example, exploratory red snapper model**. The known drawbacks occur when length-based selectivity is used or when growth is estimated; the standard normal cumulative density function used to generate the age-length transition matrix will result in a dense matrix, that when multiplied by other quantities will result in inefficient calculations. Giancarlo tried to use `Eigen::SparseMatrix` to alleviate this issue in [WHAM](https://github.com/GiancarloMCorrea/wham/blob/3af37de1566f3a99b967901e540d81ef70f613a0/src/helper_functions.hpp#L1456), but it did not help. For Milestone 2, $\phi_{y,f,l,a}$ and $\phi_{y,i,l,a}$ can be estimated externally and input as fixed matrices for each survey and fishery. In future milestones, this framework will allow us flexibility to estimate growth and length-based selectivity without needing to update this aspect of the observation model. It will also allow us to include a range of parametric, semi-parametric, and non-parametric growth functions using random effects (Correa et al., 2023). In order to speed up optimization once growth is estimated, methods should be developed to make the $\phi$ matrices sparse. </mark>
+
+## AK method
+
+Marginal age and length compositions are often fit in bespoke ADMB models in Alaska. This approach relies on age-based selectivity functions, and growth is not estimated internally.
+
+Predicted catch-at-age for year $y$ and fishery $f$ is calculated using element-wise multiplication
+
+$$ \hat{C}_{y,f,a}=F_{y,f,a}N_{y,a}\frac{(1-\text{exp}(-Z_{y,a}))}{Z_{y,a}} $$
+
+where $N_{y,a}$ is the abundance-at-age $a$ during year $y$, $Z_{y,a}$ is the total age-specific mortality for each year, and $F_{y,f,a}$ is the fleet-specific age-specific fishing mortality for each year.
+
+Similarly, the predicted abundance-at-age $\hat{I}_{y,i,a}$ for the survey index is calculated as:
+
+$$
+\hat{I}_{y,i,a}=S_{y,i,a}N_{y,a}\text{exp}(-f_{y,a}Z_{y,a})
+$$
+
+where $f_{y,a}$ is the fraction of the year when the survey was conducted.
+
+The predicted proportions-at-age (i.e., marginal age compositions) are obtained using:
+
+$$ \hat{p}_{y,f,a}=\frac{\hat{C}_{y,f,a}}{\sum\limits_{a}{\hat{C}_{y,f,a}}} $$
+
+These are converted to predicted proportions-at-length (i.e., marginal length compositions) using the dot product of $\hat{p}_{y,f,a}$ and the fleet-specific age-length transition matrix $\phi_{y,f,l,a}$:
+
+$$ \hat{p}_{y,f,l}=\hat{p}_{y,f,a}\cdot\phi_{y,f,l,a} $$
+
+Predicted survey age and length marginal compositions are obtained in an identical fashion using the age-length transition matrix specified for that survey.
+
+<mark>**IMPLEMENTATION NOTES:** This method has the benefit of being very simple. The known drawbacks are that it does not currently include length-based selectivity, and at least in Alaska, growth (i.e., the age-length transition matrix) is not estimated internally. Extensions could be developed that include length-based selectivity; for example, that convert length-based selectivity to age-based selectivity using the transpose of the age-length transition matrix. When marginal length compositions are fit, this would require an extra dot product calculation in the conversion from $\hat{p}_{y,f,a}$ to $\hat{p}_{y,f,l}$. Note that the SS3 approach is doing the same calculations but doing so using element-wise multiplication and summing over lengths or ages to get marginal age or length compositions, respectively. In SS3, these calculations happen regardless of whether age or length-based selectivity is used. It is unclear if the element-wise multiplication approach in SS3 or the dot product </mark>
+
+## SAM method
+
+SAM is a state-space assessment model used in several ICES stock assessments (is the best citation Nielsen and Berg, 2014?).
+
+$$
+\text{log}\hat{C}_{y,f,a}=\text{log}F_{y,f,a}-\text{log}Z_{y,f,a}+\text{log}N_{y,a}+\text{log}(1-\text{exp}(-Z_{y,a}))
+$$
+
+... then extend just like AK method.
+
+$$
+\hat{C}_{y,l}=\hat{C}_{y,a}\cdot\phi_{y,l,a}
+$$
+
+Similarly could convert to $F_{y,f,l}$ if needed:
+
+$$ F_{y,f,l}=F_{y,f,a}\cdot\phi_{y,f,l,a} $$
+
+<mark>**IMPLEMENTATION NOTES:** This method has the benefit of being a purely state-space model and collapses the constructs of fishing mortality and selectivity, thus reducing model complexity in theory. A drawback of this approach is that we lose parametric selectivity functions that are prevalent in the U.S. It is currently unknown how well growth (i.e., the $\phi$ matrix) can be estimated internall). We don't know currently know the trade offs for efficiency.</mark>
+
+## References
+
+Correa, G.M., Monnahan, C.C., Sullivan, J.Y., Thorson, J.T. and Punt, A.E., 2023. Modelling time-varying growth in state-space stock assessments. ICES Journal of Marine Science, 80(7), 2036-2049.
+
+Methot , R. D., and Wetzel, C. R. 2013. Stock synthesis: a biological and statistical framework for fish stock assessment and fishery manage- ment. Fisheries Research, 142: 86–99.
+
+Stock , B. C., and Miller , T . J. 2021. The Woods Hole Assessment Model (WHAM): a general state-space assessment framework that incorpo- rates time- and age-varying processes via random effects and links to environmental covariates. Fisheries Research, 240: 105967.
