@@ -102,12 +102,27 @@ Similarly could convert to $F_{y,f,l}$ if needed:
 
 $$ F_{y,f,l}=F_{y,f,a}\cdot\phi_{y,f,l,a} $$
 
-<mark>**IMPLEMENTATION NOTES:** This method has the benefit of being a purely state-space model and collapses the constructs of fishing mortality and selectivity, thus reducing model complexity in theory. A drawback of this approach is that we lose parametric selectivity functions that are prevalent in the U.S. It is currently unknown how well growth (i.e., the $\phi$ matrix) can be estimated internall). We don't know currently know the trade offs for efficiency.</mark>
+<mark>**IMPLEMENTATION NOTES:** This method has the benefit of being a purely state-space model and collapses the constructs of fishing mortality and selectivity, thus reducing model complexity in theory. A drawback of this approach is that we lose parametric selectivity functions that are prevalent in the U.S. It is currently unknown how well growth (i.e., the $\phi$ matrix) can be estimated internally). We don't know currently know the trade offs for efficiency.</mark>
+
+## Fleet and population structure
+To enable one fleet to act on multiple populations, we will need to calculate catch outside of the population loop.
+
+Places we currently loop through fleets within a population:
+* Population->Prepare loops through Fleet->Prepare
+* CalculateMortality loops through fleets to sum up F*s
+* CalculateCatch sums up catch weight-at-age and also expected catch
+* CalculateIndex 
+* CalculateCatchNAA
+* CalculateCatchWAA
+Reports: expected index, catch numbers-at-age, catch weight-at-age
+
+Fleet-> and Population-> Prepare set values to zero - don't reinitialize for each population. 
+
 
 ## References
 
 Correa, G.M., Monnahan, C.C., Sullivan, J.Y., Thorson, J.T. and Punt, A.E., 2023. Modelling time-varying growth in state-space stock assessments. ICES Journal of Marine Science, 80(7), 2036-2049.
 
-Methot , R. D., and Wetzel, C. R. 2013. Stock synthesis: a biological and statistical framework for fish stock assessment and fishery manage- ment. Fisheries Research, 142: 86–99.
+Methot , R. D., and Wetzel, C. R. 2013. Stock synthesis: a biological and statistical framework for fish stock assessment and fishery manage- ment. Fisheries Research, 142: 86--99.
 
 Stock , B. C., and Miller , T . J. 2021. The Woods Hole Assessment Model (WHAM): a general state-space assessment framework that incorpo- rates time- and age-varying processes via random effects and links to environmental covariates. Fisheries Research, 240: 105967.
