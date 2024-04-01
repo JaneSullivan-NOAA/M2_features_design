@@ -104,6 +104,11 @@ $$ F_{y,f,l}=F_{y,f,a}\cdot\phi_{y,f,l,a} $$
 
 <mark>**IMPLEMENTATION NOTES:** This method has the benefit of being a purely state-space model and collapses the constructs of fishing mortality and selectivity, thus reducing model complexity in theory. A drawback of this approach is that we lose parametric selectivity functions that are prevalent in the U.S. It is currently unknown how well growth (i.e., the $\phi$ matrix) can be estimated internall). We don't know currently know the trade offs for efficiency.</mark>
 
+## An empirical length-at-age method for length-based selectivity
+
+This approach would not use length or conditional length at age compositions, avoids estimation of growth, and is presumably similar in run times to models with age-specific selectivity. Suppose there is a matrix of annual empirical length at age estimates analogous to weight at age. To estimate length-based selectivity one could specify selectivity at age as a function of length at age: $s_a = s\left[[f\left(L_a\right)\right]$ where $f()$ could be a functional form (e.g., logistic, double-normal, etc.). The empirical lengths-at age could be derived in various ways, but for a specific stock would probably be analogous to how the corresponding empirical weight at age is calculated. 
+
+
 ## A full age and length structured model
 
 An alternate path for FIMS could be to fully specify abundance at age and length allowing for both age and length specific selectivity and growth related fishery impacts such as depletion of fast growing individuals. This scenario would simply track abundance at age and length explicitly rather than requiring transformation through an age-length matrix.
@@ -122,6 +127,6 @@ These matrices could be user specified empirical values or derived from growth f
 
 Correa, G.M., Monnahan, C.C., Sullivan, J.Y., Thorson, J.T. and Punt, A.E., 2023. Modelling time-varying growth in state-space stock assessments. ICES Journal of Marine Science, 80(7), 2036-2049.
 
-Methot , R. D., and Wetzel, C. R. 2013. Stock synthesis: a biological and statistical framework for fish stock assessment and fishery manage- ment. Fisheries Research, 142: 86–99.
+Methot , R. D., and Wetzel, C. R. 2013. Stock synthesis: a biological and statistical framework for fish stock assessment and fishery manage- ment. Fisheries Research, 142: 86--99.
 
 Stock , B. C., and Miller , T . J. 2021. The Woods Hole Assessment Model (WHAM): a general state-space assessment framework that incorpo- rates time- and age-varying processes via random effects and links to environmental covariates. Fisheries Research, 240: 105967.
