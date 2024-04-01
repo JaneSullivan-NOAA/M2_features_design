@@ -1,8 +1,16 @@
 ---
 title: "M2 FIMS features design doc"
 format: html
+execute: 
+  eval: false
 editor: visual
 ---
+# Length data 
+
+## Goal
+* P1: Ability to assimilate length data 
+* P2: Ability to estimate growth parameters 
+
 
 ## Alternative methods for including length data in age-structured assessment models
 
@@ -102,7 +110,8 @@ Similarly could convert to $F_{y,f,l}$ if needed:
 
 $$ F_{y,f,l}=F_{y,f,a}\cdot\phi_{y,f,l,a} $$
 
-<mark>**IMPLEMENTATION NOTES:** This method has the benefit of being a purely state-space model and collapses the constructs of fishing mortality and selectivity, thus reducing model complexity in theory. A drawback of this approach is that we lose parametric selectivity functions that are prevalent in the U.S. It is currently unknown how well growth (i.e., the $\phi$ matrix) can be estimated internall). We don't know currently know the trade offs for efficiency.</mark>
+<mark>**IMPLEMENTATION NOTES:** This method has the benefit of being a purely state-space model and collapses the constructs of fishing mortality and selectivity, thus reducing model complexity in theory. A drawback of this approach is that we lose parametric selectivity functions that are prevalent in the U.S. It is currently unknown how well growth (i.e., the $\phi$ matrix) can be estimated internally). We don't know currently know the trade offs for efficiency.</mark>
+
 
 ## An empirical length-at-age method for length-based selectivity
 
@@ -122,6 +131,173 @@ Growth would then be incorporated through transfer matrices for the proportional
 These matrices could be user specified empirical values or derived from growth functions. Computational efficiency could then be achieved by reducing the number of tracked bins and the number of bins between which abundance transfers occur to achieve sparcity.
 
 <mark>**IMPLEMENTATION NOTES:** This method has the benefit of being able to represent true age and length specific dynamics, while also being able to collapse down to a pure age or length structured model if the number of length or age bins was reduced to 1. Options for achieving sparsity and reduced run-time include variable age/length bins such that only high frequency bins are calculated (there are no 100cm age zero fish and no 1cm age 10 fish for instance so we could assume apriori that they are 0 based on some external threshold).</mark>
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| Age-length key (SS3) | allow for selectivity at length and tracks numbers- and age-at-length | can be slow due to dense matrices|
+| Alaska method | allow length-based selectivity |does not allow for growth estimation|
+| SAM method |||
+| Full age-length | does not assume age-length key | could be computationally intensive based on bin size |
+
+
+
+## System components
+
+### Goals
+* P1: Allow for multi-sex population structure
+* P1: Structure needs to be easily generalizable to new levels of modeling complexity including multiple areas
+* P1: Model needs to maintain maximum sparsity as dimensionality increases to optimize performance. 
+
+### Populations as subpopulations:
+
+In this scenario the existing population module becomes a sub-population. In this case each sub-population contains age/time structure with it’s own unique additional parameters such as sex, area, species with ability for interaction between sub-populations.
+
+## Unique units as subpopulations:
+ 
+Overview: In this scenario a sub-population would be created for every unique sub-unit of the population for instance all individuals of a single age/size/sex/area/species with whatever level of resolution the user chooses to specify. In this scenario all dynamics of the model are specified as transitions and interactions between these sub-units. Each sub-population would have it’s own unique parameter values that could be specified to be fixed for that sub-population (such as growth or mortality rate) or dynamically updated as individuals transfer into the sub-population (such as average age or size) where the updated value could be an abundance weighted average of current and incoming individual values.
+ 
+·         A standard age structured model would simply have n+1 subpopulations for the number of ages in the population and a plus group. Transition dynamics would then be 100% movement of individuals from one age bin to the next at each annual time step with the age zero bin being filled via a recruitment function and the plus group applying mortality and 1 year of aging to the plus group and then averaging that age and size with the incoming individuals from the last tracked age bin based on their relative abundances.
+·         A purely length structured model could be produced by using n lengths subpopulations and then defining transition dynamics between those length bins at each time step.
+·         From these you could then expand to a fully age/length specific model if desired and maintain sparsity by only having length bins for the reasonably abundance lengths at each age.
+·         Using this type of structure it may also be possible to represent fishing and survey fleets as subpopulations as there interactions are basically the same as predation in a multispecies model.
+·         Could explicitly model mature and immature individuals as separate subpopulations to enable different growth and fishery selectivity impacts.
+Have you studied the spatial capabilities paper by Goethal and Berger and others; they review all these issues?
+Areas implemented as a population can be too restrictive if there is much adult movement.
+
+### Biologically-identified sub-populations (SS3)
+In SS3 the concept is:
+Sub-populations are biologically identified.  Characteristics are:  sex, growth morph, settlement timing (within year), platoon (for implementation of size-based survivorship).  For each biology x settlement timing, fish are distributed across sexes and across platoons at birth.  All reside in a N-at-age matrix with a dimension, g.  natage(t,p,g,a)  where t is yr&season, p is area, g is biology.  A fleet operating in area p affects all bio groups in that area according to their selectivity and catchability.
+Recruits are distributed across populations and areas at birth.
+When fish of a given g move between areas, they are still the same “g” biologically.  This is a bit limiting as it means that growth rate cannot be area-specific in SS3.  Although a fast-growing morph could recruit into one area and a slow growing morph into another area and they can move among the areas.  Alternatively, growth could be area specific and when fish move between areas the mean size of fish in each destination area would be the weighted mean of resident and immigrant fish.  This means that mean size-at-age would be very dynamic and cause lots of computations.
+
+| Approach | Pros | Cons |
+| -------- | ---- | --- |
+| Populations are subpopulations | Subpopulation is easily interpretable and follows structure we are familiar with, computationally simple | Dynamics between sub-populations occur at a different timestep than those that can occur between ages within a sub-population, limits the applicability of density-dependent processes such as cannibalism, less flexible than specifying fully flexible population segments since each population must have age structure |
+| Dynamic subpopulations | Subpopulations do not need age structure and interact in real time, and are very flexible and extensible | Bookkeeping might mean replicating complex structures anyway | 
+| Biological subpopulations | Easier biological interpretability | Harder to extend to new segments |
+
+## Use cases
+
+### Multi-sex population
+
+```{r}
+males <- new(Population)
+Females <- new(Population)
+nyears <- 10
+nages <- 10
+males$log_M <- females$log_M <- rep(-1, nyears*nages)
+males$estimate_M <- females$estimate_M <- FALSE
+males$log_init_naa <- females$log_init_naa <- log(rep(1, nages))
+males$estimate_init_naa <- females$estimate_init_naa <- TRUE
+males$nages <- females$nages <- nages
+males$ages <- females$ages <- 1:nages
+males$nfleets <- females$nfleets <- 2
+males$nseasons <- females$nseasons <- 1
+males$nyears <- females$nyears <- nyears
+```
+
+Thoughts: 
+this doesn’t allow for dynamic estimation of the female/male ratio, but does make it very easy to make every element of the population differ between sexes
+
+To enable one fleet to act on multiple populations, we will need to calculate catch outside of the population loop.
+
+Places we currently loop through fleets within a population:
+* Population->Prepare loops through Fleet->Prepare
+* CalculateMortality loops through fleets to sum up F*s
+* CalculateCatch sums up catch weight-at-age and also expected catch
+* CalculateIndex 
+* CalculateCatchNAA
+* CalculateCatchWAA
+Reports: expected index, catch numbers-at-age, catch weight-at-age
+
+Fleet-> and Population-> Prepare set values to zero - don't reinitialize for each population. 
+
+
+### Predation
+
+```{r}
+prey <- new(Population)
+predators <- new(Population)
+nyears <- 10
+nages <- 10
+prey$linked_population_id <- 2
+prey$link_type <- “mortality”
+predators$log_const_M <- rep(-1, nyears*nages)
+predators$log_const_M <- FALSE
+prey$type2_M$a <- 1
+prey$type2_M$h <- 5 #probably nonsensical values
+prey$type2_M$estimate_a <- TRUE
+prey$type2_M$estimate_h <- FALSE 
+prey$log_init_naa <- predators$log_init_naa <- log(rep(1, nages))
+prey$estimate_init_naa <- predators$estimate_init_naa <- TRUE
+prey$nages <- predators$nages <- nages
+prey$ages <- predators$ages <- 1:nages
+prey$nfleets <- predators$nfleets <- 2
+prey$nseasons <- predators$nseasons <- 1
+```
+
+Thoughts: 
+What if we have different years of data? Do we just fill the extra years with NAs or do we allow vector lengths to differ?
+Need some way to specify the type of link?
+Can we operate on a one-step lag?
+
+
+### Density-dependent M
+
+```{r}
+prey <- new(Population)
+predators <- new(Population)
+nyears <- 10
+nages <- 10
+prey$linked_population_id <- 2
+prey$link_type <- “mortality”
+predators$log_const_M <- rep(-1, nyears*nages)
+predators$log_const_M <- FALSE
+prey$type2_M$a <- 1
+prey$type2_M$h <- 5 #probably nonsensical values
+prey$type2_M$estimate_a <- TRUE
+prey$type2_M$estimate_h <- FALSE 
+prey$log_init_naa <- predators$log_init_naa <- log(rep(1, nages))
+prey$estimate_init_naa <- predators$estimate_init_naa <- TRUE
+prey$nages <- predators$nages <- nages
+prey$ages <- predators$ages <- 1:nages
+prey$nfleets <- predators$nfleets <- 2
+prey$nseasons <- predators$nseasons <- 1
+```
+
+Thoughts: 
+What if we have different years of data? Do we just fill the extra years with NAs or do we allow vector lengths to differ?
+Need some way to specify the type of link?
+Can we operate on a one-step lag?
+
+
+Time loop outside of the population units?
+Different subpops could be handled in the same way as fleet
+
+### Different Area/Population
+
+```{r}
+Pop1 <- new(Population)
+pop2 <- new(Population)
+nyears <- 10
+nages <- 10
+pop1$linked_population_id <- 2
+pop2$link_type <- “movement”
+predators$naa2 <- rep(-1, nyears*nages)
+pop1$log_init_naa <- pop2$log_init_naa <- log(rep(1, nages))
+pop1$estimate_init_naa <- pop2$estimate_init_naa <- TRUE
+pop1$nages <- pop2$nages <- nages
+pop1$ages <- pop2$ages <- 1:nages
+pop1$nfleets <- pop2$nfleets <- 2
+pop1$nseasons <- pop2$nseasons <- 1
+```
+
+
+Thoughts: 
+
+TODO: Figure out looping over interactions between populations within each population.
+Create canva flow chart to show this graphically 
+
 
 ## References
 
