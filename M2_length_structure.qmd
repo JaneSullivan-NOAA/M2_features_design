@@ -147,12 +147,12 @@ Additional notes and references in [M2 development notes folder](https://drive.g
 
 </mark>
 
-| Approach             | Pros                                                                  | Cons                                                                               |
+| Approach             | Pros                                                                          | Cons                                                                               |
 |--------------------------------|--------------------|--------------------|
-| Age-length key (SS3) | allow for selectivity at length and tracks numbers- and age-at-length | can be slow due to dense matrices. does not track length specific fishing impacts. |
-| Alaska method        | allow length-based selectivity                                        | does not allow for growth estimation.                                              |
-| SAM method           | State-space flexibility                                               | Current practices in US focused on parametric modeling.                            |
-| Full age-length      | does not assume fixed age-length key                                  | could be computationally intensive based on bin size.                              |
+| Age-length key (SS3) | allow for selectivity at length and tracks numbers- and age-at-length         | can be slow due to dense matrices. does not track length specific fishing impacts. |
+| Alaska method        | allow length-based selectivity                                                | does not allow for growth estimation.                                              |
+| SAM method           | State-space flexibility                                                       | Current practices in US focused on parametric modeling.                            |
+| Full age-length      | does not assume fixed age-length key. Potential to scale complexity/runtime.  | could be computationally intensive based on bin size.                              |
 
 ## System components
 
