@@ -177,11 +177,14 @@ Requirements:
 - No increase in complexity for the single-population case
 - Easy to share parameters across populations
 - Easy to aggregate derived quantities across populations
-- Reference points are specific to each population 
 - Fleets operate on one or more populations
 
 Design: 
-
+- Use TMB map function to mirror parameters if sub-populations need to share
+- Reference points are specific to each population
+- Can store pointer to the linked population within the Information class and reference it within the other population
+- Fleet-specific methods (CalculateCatch, etc.) will need to move from Population to Fleet
+- Add Fleet->Evaluate and associated call to model.hpp
 
 ### Unique units as subpopulations:
 
