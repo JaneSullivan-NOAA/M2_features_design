@@ -186,6 +186,10 @@ Design:
 - Fleet-specific methods (CalculateCatch, etc.) will need to move from Population to Fleet
 - Add Fleet->Evaluate and associated call to model.hpp
 
+Evaluation criteria:
+- Compare to multi-WHAM and SS3 approaches to segementing populations to ID if class structure improves extensibility
+- What are the metrics for success?
+
 ### Unique units as subpopulations:
 
 Overview: In this scenario a sub-population would be created for every unique sub-unit of the population for instance all individuals of a single age/size/sex/area/species with whatever level of resolution the user chooses to specify. In this scenario all dynamics of the model are specified as transitions and interactions between these sub-units. Each sub-population would have it’s own unique parameter values that could be specified to be fixed for that sub-population (such as growth or mortality rate) or dynamically updated as individuals transfer into the sub-population (such as average age or size) where the updated value could be an abundance weighted average of current and incoming individual values.
