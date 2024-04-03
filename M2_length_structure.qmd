@@ -171,9 +171,19 @@ Bjarki Þór Elvarsson, Pamela J. Woods, Höskuldur Björnsson, Jamie Lentin, Gu
 
 ### Populations as subpopulations:
 
-In this scenario the existing population module becomes a sub-population. In this case each sub-population contains age/time structure with it’s own unique additional parameters such as sex, area, species with ability for interaction between sub-populations.
+In this scenario the existing population module becomes a sub-population. In this case each sub-population contains age/time structure with its own class. Sub-populations would be generalizable to different partitions, such as sex, area, and species, wich a common set of functions that govern 1. interaction between sub-populations and 2. movement between sub-populations. Currently, each population within FIMS has members unique to each population. These members include parameters, derived quantities, and fixed values such as year and age dimensions. 
 
-## Unique units as subpopulations:
+Requirements:
+- No increase in complexity for the single-population case
+- Easy to share parameters across populations
+- Easy to aggregate derived quantities across populations
+- Reference points are specific to each population 
+- Fleets operate on one or more populations
+
+Design: 
+
+
+### Unique units as subpopulations:
 
 Overview: In this scenario a sub-population would be created for every unique sub-unit of the population for instance all individuals of a single age/size/sex/area/species with whatever level of resolution the user chooses to specify. In this scenario all dynamics of the model are specified as transitions and interactions between these sub-units. Each sub-population would have it’s own unique parameter values that could be specified to be fixed for that sub-population (such as growth or mortality rate) or dynamically updated as individuals transfer into the sub-population (such as average age or size) where the updated value could be an abundance weighted average of current and incoming individual values.
 
